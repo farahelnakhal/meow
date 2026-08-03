@@ -85,9 +85,6 @@ dist
 
 # Gatsby files
 .cache/
-# Comment in the public line in if your project uses Gatsby and not Next.js
-# https://nextjs.org/blog/next-9-1#public-directory-support
-# public
 
 # vuepress build output
 .vuepress/dist
@@ -141,3 +138,41 @@ dist
 vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
 .vite/
+
+#React Native/Expo/EAS
+.expo/
+.expo-shared/
+web-build/
+eas-build-*.log
+*.jks
+*.p8
+*.p12
+*.mobileprovision
+*.orig.*
+
+#Native
+ios/Pods/
+ios/build/
+android/app/build/
+android/build/
+android/.gradle/
+*.hprof
+
+#metro bundler
+.metro-health-check*
+
+#firebase/FCM
+google-services.json
+GoogleService-Info.plist
+
+#supabase local dev
+supabase/.branches
+supabase/.temp
+supabase/.env
+
+#macOS
+.DS_Store
+
+#editor
+.vscode/
+.idea/
