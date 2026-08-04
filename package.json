@@ -17,5 +17,8 @@
   "bugs": {
     "url": "https://github.com/farahelnakhal/meow/issues"
   },
-  "homepage": "https://github.com/farahelnakhal/meow#readme"
+  "homepage": "https://github.com/farahelnakhal/meow#readme",
+  "dependencies": {
+    "@supabase/supabase-js": "^2.112.0"
+  }
 }
