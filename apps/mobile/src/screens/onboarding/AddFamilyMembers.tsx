@@ -43,7 +43,7 @@ export default function AddFamilyMembers() {
     }
 
     setSaving(false);
-    navigation.navigate('Home'); //placeholder for now
+    navigation.navigate('ProfileSwitcher');
   };
 
   return (

@@ -59,6 +59,9 @@ export default function CreateFamilyAccount() {
       <TextInput placeholder="Email" value={email} onChangeText={setEmail} autoCapitalize="none" style={{ borderWidth: 1, padding: 10 }} />
       <TextInput placeholder="Password" value={password} onChangeText={setPassword} secureTextEntry style={{ borderWidth: 1, padding: 10 }} />
       <Button title={loading ? 'Creating...' : 'Create Family'} onPress={handleCreate} disabled={loading} />
+      <Text onPress={() => navigation.navigate('SignIn')} style={{ color: 'blue', textAlign: 'center' }}>
+        Already have a family? Sign in
+      </Text>
     </View>
   );
 }
