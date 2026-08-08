@@ -1,13 +1,13 @@
 import React, { useEffect, useState } from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import { View, Text } from 'react-native';
+import { View, Text, ActivityIndicator } from 'react-native';
 import { supabase } from '../services/supabaseClient';
 import CreateFamilyAccount from '../screens/onboarding/CreateFamilyAccount';
-import SignIn from '../screens/onboarding/SignIn'; 
+import SignIn from '../screens/onboarding/SignIn';
 import AddFamilyMembers from '../screens/onboarding/AddFamilyMembers';
 import ProfileSwitcher from '../screens/onboarding/ProfileSwitcher';
-import { getActiveProfile } from '../store/activeProfile';
+import { getActiveProfile, clearActiveProfile } from '../store/activeProfile';
 
 const Stack = createNativeStackNavigator();
 
@@ -27,22 +27,42 @@ export default function RootNavigator() {
   useEffect(() => {
     const init = async () => {
       const { data } = await supabase.auth.getSession();
+
+      if (data.session) {
+        const { data: userData, error } = await supabase.auth.getUser();
+        if (error || !userData?.user) {
+          console.log('[Root] stale session discarded:', error?.message);
+          await supabase.auth.signOut();
+          await clearActiveProfile();
+          setSession(null);
+          setActiveProfileId(null);
+          setLoading(false);
+          return;
+        }
+      }
+
       setSession(data.session);
-      const profileId = await getActiveProfile();
-      setActiveProfileId(profileId);
+      setActiveProfileId(await getActiveProfile());
       setLoading(false);
     };
+
     init();
 
     const { data: listener } = supabase.auth.onAuthStateChange(async (_event, session) => {
       setSession(session);
-      const profileId = await getActiveProfile();
-      setActiveProfileId(profileId);
+      setActiveProfileId(await getActiveProfile());
     });
+
     return () => listener.subscription.unsubscribe();
   }, []);
 
-  if (loading) return null;
+  if (loading) {
+    return (
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+        <ActivityIndicator />
+      </View>
+    );
+  }
 
   return (
     <NavigationContainer>

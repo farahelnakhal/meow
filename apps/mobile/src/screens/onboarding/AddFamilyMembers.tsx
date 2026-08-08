@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TextInput, Button, FlatList, Alert } from 'react-native';
+import { View, Text, TextInput, Button, FlatList, Alert, ActivityIndicator } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { supabase } from '../../services/supabaseClient';
 
@@ -9,6 +9,7 @@ export default function AddFamilyMembers() {
   const navigation = useNavigation<any>();
   const route = useRoute<any>();
   const [familyId, setFamilyId] = useState<string | null>(route.params?.familyId ?? null);
+  const [lookupError, setLookupError] = useState<string | null>(null);
 
   const [name, setName] = useState('');
   const [birthYear, setBirthYear] = useState('');
@@ -16,27 +17,44 @@ export default function AddFamilyMembers() {
   const [members, setMembers] = useState<Member[]>([]);
   const [saving, setSaving] = useState(false);
 
+  //fallback path: RootNavigator swaps stacks, mount screen w no params
   useEffect(() => {
-    if (familyId) return; // already have it from navigation params
+    if (familyId) return;
 
-    const loadFamilyId = async () => {
+    let cancelled = false;
+    let attempts = 0;
+
+    const tryLoad = async () => {
+      if (cancelled) return;
+
       const { data: userData } = await supabase.auth.getUser();
-      if (!userData.user) return;
+      if (!userData.user || cancelled) return;
 
       const { data: memberRow, error } = await supabase
         .from('family_members')
         .select('family_id')
         .eq('auth_user_id', userData.user.id)
-        .single();
+        .maybeSingle();
 
-      if (error) {
-        console.log('lookup error:', error.message);
+      if (cancelled) return;
+
+      if (memberRow) {
+        setFamilyId(memberRow.family_id);
         return;
       }
 
-      if (memberRow) setFamilyId(memberRow.family_id);
+      attempts += 1;
+      if (attempts < 8) {
+        setTimeout(tryLoad, 500); //~4s total
+      } else {
+        setLookupError(error?.message ?? 'Could not find your family after signup.');
+      }
     };
-    loadFamilyId();
+
+    tryLoad();
+    return () => {
+      cancelled = true;
+    };
   }, [familyId]);
 
   const addToList = () => {
@@ -49,12 +67,13 @@ export default function AddFamilyMembers() {
   const handleFinish = async () => {
     if (!familyId) return;
     setSaving(true);
+
     const rows = members.map((m) => ({
       family_id: familyId,
       display_name: m.display_name,
       role: m.role,
       birth_year: m.birth_year ? parseInt(m.birth_year, 10) : null,
-      auth_user_id: null, //kids dont get supabase auth acc
+      auth_user_id: null, //kids dont get auth accounts
     }));
 
     if (rows.length > 0) {
@@ -70,7 +89,30 @@ export default function AddFamilyMembers() {
     navigation.navigate('ProfileSwitcher');
   };
 
-  if (!familyId) return null; // loading state while we resolve family_id
+  //never render bare null here
+  if (!familyId) {
+    return (
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 20, gap: 12 }}>
+        {lookupError ? (
+          <>
+            <Text style={{ fontSize: 16, textAlign: 'center' }}>{lookupError}</Text>
+            <Button
+              title="Retry"
+              onPress={() => {
+                setLookupError(null);
+                setFamilyId(null);
+              }}
+            />
+          </>
+        ) : (
+          <>
+            <ActivityIndicator />
+            <Text>Setting up your family…</Text>
+          </>
+        )}
+      </View>
+    );
+  }
 
   return (
     <View style={{ flex: 1, padding: 20, gap: 12 }}>

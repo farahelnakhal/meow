@@ -12,43 +12,38 @@ export default function CreateFamilyAccount() {
   const [loading, setLoading] = useState(false);
 
   const handleCreate = async () => {
+    if (!familyName.trim() || !parentName.trim()) {
+      Alert.alert('Missing info', 'Family name and your name are both required.');
+      return;
+    }
+
     setLoading(true);
+
     const { data: authData, error: authError } = await signUpWithEmail(email, password);
-    if (authError || !authData.user) {
-      Alert.alert('Error', authError?.message ?? 'Signup failed');
+
+    if (authError || !authData.session) {
+      Alert.alert(
+        'Error',
+        authError?.message ?? 'Signup returned no session'
+      );
       setLoading(false);
       return;
     }
 
-    const { data: family, error: familyError } = await supabase
-      .from('families')
-      .insert({ name: familyName })
-      .select()
-      .single();
-
-    if (familyError) {
-      Alert.alert('Error', familyError.message);
-      setLoading(false);
-      return;
-    }
-
-    //parent gets a real auth-linked member row
-    const { error: memberError } = await supabase.from('family_members').insert({
-      family_id: family.id,
-      auth_user_id: authData.user.id,
-      display_name: parentName,
-      role: 'parent',
+    // single atomic call: creates families row + parents family_members row
+    const { data: familyId, error: rpcError } = await supabase.rpc('create_family_with_parent', {
+      p_family_name: familyName,
+      p_parent_name: parentName,
     });
 
     setLoading(false);
 
-    if (memberError) {
-      Alert.alert('Error', memberError.message);
+    if (rpcError || !familyId) {
+      Alert.alert('Error', rpcError?.message ?? 'Family creation returned nothing.');
       return;
     }
 
-    //move to adding kids/other members (pass family_id)
-    navigation.navigate('AddFamilyMembers', { familyId: family.id });
+    navigation.navigate('AddFamilyMembers', { familyId });
   };
 
   return (
@@ -56,7 +51,7 @@ export default function CreateFamilyAccount() {
       <Text style={{ fontSize: 24, fontWeight: 'bold' }}>Create Your Family</Text>
       <TextInput placeholder="Family name" value={familyName} onChangeText={setFamilyName} style={{ borderWidth: 1, padding: 10 }} />
       <TextInput placeholder="Your name" value={parentName} onChangeText={setParentName} style={{ borderWidth: 1, padding: 10 }} />
-      <TextInput placeholder="Email" value={email} onChangeText={setEmail} autoCapitalize="none" style={{ borderWidth: 1, padding: 10 }} />
+      <TextInput placeholder="Email" value={email} onChangeText={setEmail} autoCapitalize="none" keyboardType="email-address" style={{ borderWidth: 1, padding: 10 }} />
       <TextInput placeholder="Password" value={password} onChangeText={setPassword} secureTextEntry style={{ borderWidth: 1, padding: 10 }} />
       <Button title={loading ? 'Creating...' : 'Create Family'} onPress={handleCreate} disabled={loading} />
       <Text onPress={() => navigation.navigate('SignIn')} style={{ color: 'blue', textAlign: 'center' }}>

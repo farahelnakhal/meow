@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, FlatList, TouchableOpacity } from 'react-native';
+import { View, Text, FlatList, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { supabase } from '../../services/supabaseClient';
 import { setActiveProfile } from '../../store/activeProfile';
@@ -10,29 +10,51 @@ export default function ProfileSwitcher() {
   const navigation = useNavigation<any>();
   const [members, setMembers] = useState<Member[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const loadMembers = async () => {
-      const { data: userData } = await supabase.auth.getUser();
-      if (!userData.user) return;
+      try {
+        const { data: userData } = await supabase.auth.getUser();
+        if (!userData.user) {
+          setError('Not signed in.');
+          return;
+        }
 
-      // find the parent's own member row to get family_id
-      const { data: parentRow } = await supabase
-        .from('family_members')
-        .select('family_id')
-        .eq('auth_user_id', userData.user.id)
-        .single();
+        //find the parents own member row to get family_id
+        const { data: parentRow, error: parentErr } = await supabase
+          .from('family_members')
+          .select('family_id')
+          .eq('auth_user_id', userData.user.id)
+          .maybeSingle();
 
-      if (!parentRow) return;
+        if (parentErr) {
+          setError(parentErr.message);
+          return;
+        }
+        if (!parentRow) {
+          setError('No family found for this account.');
+          return;
+        }
 
-      const { data: allMembers } = await supabase
-        .from('family_members')
-        .select('id, display_name, role')
-        .eq('family_id', parentRow.family_id);
+        const { data: allMembers, error: membersErr } = await supabase
+          .from('family_members')
+          .select('id, display_name, role')
+          .eq('family_id', parentRow.family_id);
 
-      setMembers(allMembers ?? []);
-      setLoading(false);
+        if (membersErr) {
+          setError(membersErr.message);
+          return;
+        }
+
+        setMembers(allMembers ?? []);
+      } catch (e: any) {
+        setError(e?.message ?? 'Something went wrong loading profiles.');
+      } finally {
+        setLoading(false);
+      }
     };
+
     loadMembers();
   }, []);
 
@@ -41,7 +63,21 @@ export default function ProfileSwitcher() {
     navigation.reset({ index: 0, routes: [{ name: 'Home' }] });
   };
 
-  if (loading) return null;
+  if (loading) {
+    return (
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+        <ActivityIndicator />
+      </View>
+    );
+  }
+
+  if (error) {
+    return (
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 20 }}>
+        <Text style={{ textAlign: 'center' }}>{error}</Text>
+      </View>
+    );
+  }
 
   return (
     <View style={{ flex: 1, padding: 20, gap: 12 }}>
