@@ -8,6 +8,8 @@ import SignIn from '../screens/onboarding/SignIn';
 import AddFamilyMembers from '../screens/onboarding/AddFamilyMembers';
 import ProfileSwitcher from '../screens/onboarding/ProfileSwitcher';
 import { getActiveProfile, clearActiveProfile } from '../store/activeProfile';
+import ParentSurvey from '../screens/onboarding/ParentSurvey';
+import MemberInterestQuiz from '../screens/onboarding/MemberInterestQuiz';
 
 const Stack = createNativeStackNavigator();
 
@@ -75,6 +77,8 @@ export default function RootNavigator() {
         ) : !activeProfileId ? (
           <>
             <Stack.Screen name="AddFamilyMembers" component={AddFamilyMembers} />
+            <Stack.Screen name="ParentSurvey" component={ParentSurvey} />
+            <Stack.Screen name="MemberInterestQuiz" component={MemberInterestQuiz} />
             <Stack.Screen name="ProfileSwitcher" component={ProfileSwitcher} />
           </>
         ) : (

@@ -86,7 +86,7 @@ export default function AddFamilyMembers() {
     }
 
     setSaving(false);
-    navigation.navigate('ProfileSwitcher');
+    navigation.navigate('ParentSurvey');
   };
 
   //never render bare null here
