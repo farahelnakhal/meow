@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, TextInput, Button, FlatList, Alert } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { supabase } from '../../services/supabaseClient';
@@ -8,13 +8,36 @@ type Member = { display_name: string; role: 'child' | 'caregiver'; birth_year?: 
 export default function AddFamilyMembers() {
   const navigation = useNavigation<any>();
   const route = useRoute<any>();
-  const { familyId } = route.params;
+  const [familyId, setFamilyId] = useState<string | null>(route.params?.familyId ?? null);
 
   const [name, setName] = useState('');
   const [birthYear, setBirthYear] = useState('');
   const [role, setRole] = useState<'child' | 'caregiver'>('child');
   const [members, setMembers] = useState<Member[]>([]);
   const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    if (familyId) return; // already have it from navigation params
+
+    const loadFamilyId = async () => {
+      const { data: userData } = await supabase.auth.getUser();
+      if (!userData.user) return;
+
+      const { data: memberRow, error } = await supabase
+        .from('family_members')
+        .select('family_id')
+        .eq('auth_user_id', userData.user.id)
+        .single();
+
+      if (error) {
+        console.log('lookup error:', error.message);
+        return;
+      }
+
+      if (memberRow) setFamilyId(memberRow.family_id);
+    };
+    loadFamilyId();
+  }, [familyId]);
 
   const addToList = () => {
     if (!name.trim()) return;
@@ -24,6 +47,7 @@ export default function AddFamilyMembers() {
   };
 
   const handleFinish = async () => {
+    if (!familyId) return;
     setSaving(true);
     const rows = members.map((m) => ({
       family_id: familyId,
@@ -45,6 +69,8 @@ export default function AddFamilyMembers() {
     setSaving(false);
     navigation.navigate('ProfileSwitcher');
   };
+
+  if (!familyId) return null; // loading state while we resolve family_id
 
   return (
     <View style={{ flex: 1, padding: 20, gap: 12 }}>
