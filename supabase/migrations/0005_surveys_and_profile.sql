@@ -20,8 +20,7 @@ insert into interest_categories (key, label, sort_order) values
   ('nature','Nature & Environment', 12),
   ('technology','Technology & Innnovation', 13),
   ('fashion','Fashion & Style', 14),
-  ('community','Community & Culture', 15),
-  ('wellbeing','Wellbeing & Personal Growth')
+  ('community','Community & Culture', 15);
 
 alter table interest_categories enable row level security;
 
