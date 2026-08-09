@@ -6,7 +6,7 @@ create table interest_categories (
 );
 
 insert into interest_categories (key, label, sort_order) values
-  ('arts_crafts', 'Arts & Crafts', 1),
+  ('arts', 'Arts & Crafts', 1),
   ('cooking', 'Cooking & Baking', 2),
   ('outdoors', 'Outdoors & Exploring', 3),
   ('games', 'Games & Puzzles', 4),
@@ -14,9 +14,14 @@ insert into interest_categories (key, label, sort_order) values
   ('music', 'Music & Performance', 6),
   ('building', 'Building & Making', 7),
   ('animals', 'Animals & Pets', 8),
-  ('stories', 'Stories & Reading', 9),
+  ('books', 'Reading & Books', 9),
   ('science', 'Science & Discovery', 10),
-  ('connection','Talking & Hanging Out', 11);
+  ('talking','Talking & Hanging Out', 11),
+  ('nature','Nature & Environment', 12),
+  ('technology','Technology & Innnovation', 13),
+  ('fashion','Fashion & Style', 14),
+  ('community','Community & Culture', 15),
+  ('wellbeing','Wellbeing & Personal Growth')
 
 alter table interest_categories enable row level security;
 
