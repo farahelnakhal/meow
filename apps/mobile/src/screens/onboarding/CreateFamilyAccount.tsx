@@ -3,7 +3,8 @@ import { View, Text, TextInput, Button, Alert, ScrollView, TouchableOpacity } fr
 import { useNavigation } from '@react-navigation/native';
 import { supabase, signUpWithEmail } from '../../services/supabaseClient';
 
-const GAME_OPTIONS = ['Pokémon GO', 'Uno', 'Monopoly', 'LEGO', 'Minecraft', 'Board games'];
+//must match missions.requires_game values exactly or filter silently
+const GAME_OPTIONS = ['LEGO'];
 const RADIUS_OPTIONS = [500, 1000, 2000, 5000];
 
 export default function CreateFamilyAccount() {
@@ -12,9 +13,10 @@ export default function CreateFamilyAccount() {
   const [parentName, setParentName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [maxBudget, setMaxBudget] = useState('50');
+  const [maxBudget, setMaxBudget] = useState('20');
   const [radius, setRadius] = useState(1000);
   const [games, setGames] = useState<string[]>([]);
+  const [hasPets, setHasPets] = useState(false);
   const [loading, setLoading] = useState(false);
 
   const toggleGame = (g: string) =>
@@ -35,11 +37,9 @@ export default function CreateFamilyAccount() {
     setLoading(true);
     const { data: authData, error: authError } = await signUpWithEmail(email, password);
 
+    // session, not just user:
     if (authError || !authData.session) {
-      Alert.alert(
-        'Error',
-        authError?.message ?? 'Signup returned no session — check that email confirmation is off in Supabase.'
-      );
+      Alert.alert('Error', authError?.message ?? 'Signup returned no session. Check that email confirmation is off in Supabase.');
       setLoading(false);
       return;
     }
@@ -50,6 +50,7 @@ export default function CreateFamilyAccount() {
       p_max_budget: budget,
       p_geofence_radius_meters: radius,
       p_games_owned: games,
+      p_has_pets: hasPets,
     });
 
     setLoading(false);
@@ -62,43 +63,48 @@ export default function CreateFamilyAccount() {
     navigation.navigate('AddFamilyMembers', { familyId });
   };
 
+  const chip = (selected: boolean) => ({
+    borderWidth: 1, borderRadius: 16, paddingVertical: 8, paddingHorizontal: 14,
+    borderColor: selected ? '#333' : '#ccc',
+    backgroundColor: selected ? '#333' : 'transparent',
+  });
+
   return (
-    <ScrollView contentContainerStyle={{ padding: 20, gap: 12, paddingTop: 60 }}>
+    <ScrollView contentContainerStyle={{ padding: 20, gap: 12, paddingTop: 60, paddingBottom: 40 }}>
       <Text style={{ fontSize: 24, fontWeight: 'bold' }}>Create Your Family</Text>
 
-      <TextInput placeholder="Family name" value={familyName} onChangeText={setFamilyName} style={{ borderWidth: 1, padding: 10 }} />
-      <TextInput placeholder="Your name" value={parentName} onChangeText={setParentName} style={{ borderWidth: 1, padding: 10 }} />
-      <TextInput placeholder="Email" value={email} onChangeText={setEmail} autoCapitalize="none" keyboardType="email-address" style={{ borderWidth: 1, padding: 10 }} />
-      <TextInput placeholder="Password" value={password} onChangeText={setPassword} secureTextEntry style={{ borderWidth: 1, padding: 10 }} />
+      <TextInput placeholder="Family name" value={familyName} onChangeText={setFamilyName} style={{ borderWidth: 1, borderColor: '#ccc', padding: 10, borderRadius: 6 }} />
+      <TextInput placeholder="Your name" value={parentName} onChangeText={setParentName} style={{ borderWidth: 1, borderColor: '#ccc', padding: 10, borderRadius: 6 }} />
+      <TextInput placeholder="Email" value={email} onChangeText={setEmail} autoCapitalize="none" keyboardType="email-address" style={{ borderWidth: 1, borderColor: '#ccc', padding: 10, borderRadius: 6 }} />
+      <TextInput placeholder="Password" value={password} onChangeText={setPassword} secureTextEntry style={{ borderWidth: 1, borderColor: '#ccc', padding: 10, borderRadius: 6 }} />
 
       <Text style={{ fontWeight: 'bold', marginTop: 12 }}>Spending limit per mission</Text>
-      <TextInput placeholder="0" value={maxBudget} onChangeText={setMaxBudget} keyboardType="numeric" style={{ borderWidth: 1, padding: 10 }} />
-      <Text style={{ fontSize: 12, color: '#666' }}>Missions costing more than this are never assigned.</Text>
+      <TextInput placeholder="0" value={maxBudget} onChangeText={setMaxBudget} keyboardType="numeric" style={{ borderWidth: 1, borderColor: '#ccc', padding: 10, borderRadius: 6 }} />
+      <Text style={{ fontSize: 12, color: '#666' }}>
+        Missions that cost more than this are never assigned. Set 0 for free missions only.
+      </Text>
 
       <Text style={{ fontWeight: 'bold', marginTop: 12 }}>How far can members travel?</Text>
       <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
         {RADIUS_OPTIONS.map((r) => (
-          <TouchableOpacity
-            key={r}
-            onPress={() => setRadius(r)}
-            style={{ borderWidth: 1, borderRadius: 16, paddingVertical: 6, paddingHorizontal: 12, backgroundColor: radius === r ? '#333' : 'transparent' }}
-          >
-            <Text style={{ color: radius === r ? 'white' : 'black' }}>{r >= 1000 ? `${r / 1000} km` : `${r} m`}</Text>
+          <TouchableOpacity key={r} onPress={() => setRadius(r)} style={chip(radius === r)}>
+            <Text style={{ color: radius === r ? 'white' : 'black' }}>
+              {r >= 1000 ? `${r / 1000} km` : `${r} m`}
+            </Text>
           </TouchableOpacity>
         ))}
       </View>
 
-      <Text style={{ fontWeight: 'bold', marginTop: 12 }}>What does your family already have?</Text>
+      <Text style={{ fontWeight: 'bold', marginTop: 12 }}>What do you already have at home?</Text>
       <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
         {GAME_OPTIONS.map((g) => (
-          <TouchableOpacity
-            key={g}
-            onPress={() => toggleGame(g)}
-            style={{ borderWidth: 1, borderRadius: 16, paddingVertical: 6, paddingHorizontal: 12, backgroundColor: games.includes(g) ? '#333' : 'transparent' }}
-          >
+          <TouchableOpacity key={g} onPress={() => toggleGame(g)} style={chip(games.includes(g))}>
             <Text style={{ color: games.includes(g) ? 'white' : 'black' }}>{g}</Text>
           </TouchableOpacity>
         ))}
+        <TouchableOpacity onPress={() => setHasPets(!hasPets)} style={chip(hasPets)}>
+          <Text style={{ color: hasPets ? 'white' : 'black' }}>A pet</Text>
+        </TouchableOpacity>
       </View>
 
       <View style={{ marginTop: 20 }}>

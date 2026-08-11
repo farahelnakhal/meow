@@ -2,14 +2,12 @@ import React, { useEffect, useState } from 'react';
 import { View, Text, Button, Alert, ScrollView, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { supabase } from '../../services/supabaseClient';
-import { generateFamilyProfile } from '../../services/api/profile';
-import { InterestCategory, FamilyMemberRow, WEIGHT_LABELS } from '../../types/onboarding';
+import { type InterestCategory, type FamilyMemberRow, WEIGHT_LABELS } from '../../types/onboarding';
 
 export default function MemberInterestQuiz() {
   const navigation = useNavigation<any>();
   const [categories, setCategories] = useState<InterestCategory[]>([]);
   const [members, setMembers] = useState<FamilyMemberRow[]>([]);
-  const [familyId, setFamilyId] = useState<string | null>(null);
   const [index, setIndex] = useState(0);
   const [weights, setWeights] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(true);
@@ -29,15 +27,12 @@ export default function MemberInterestQuiz() {
           .maybeSingle();
 
         if (meErr || !me) return setError(meErr?.message ?? 'No family found.');
-        setFamilyId(me.family_id);
 
         const [catsRes, memsRes] = await Promise.all([
           supabase.from('interest_categories').select('key, label, sort_order').order('sort_order'),
-          supabase
-            .from('family_members')
+          supabase.from('family_members')
             .select('id, display_name, role, birth_year')
-            .eq('family_id', me.family_id)
-            .order('created_at'),
+            .eq('family_id', me.family_id).order('created_at'),
         ]);
 
         if (catsRes.error) return setError(catsRes.error.message);
@@ -46,7 +41,7 @@ export default function MemberInterestQuiz() {
         setCategories(catsRes.data ?? []);
         setMembers(memsRes.data ?? []);
       } catch (e: any) {
-        setError(e?.message ?? 'Failed to load quiz.');
+        setError(e?.message ?? 'Failed to load the quiz.');
       } finally {
         setLoading(false);
       }
@@ -56,21 +51,11 @@ export default function MemberInterestQuiz() {
 
   const current = members[index];
 
-  const finishAll = async () => {
-    if (!familyId) return;
-    setSaving(true);
-    const { error: fnError } = await generateFamilyProfile(familyId);
-    setSaving(false);
-
-    // profile generation is an enhancement, not a gate — never trap the user here
-    if (fnError) console.log('profile generation failed:', fnError);
-    navigation.navigate('ProfileSwitcher');
-  };
-
   const handleNext = async () => {
     if (!current) return;
     setSaving(true);
 
+    //unrated categories default to 1 matching assignment functions coalesce(mi.weight, 1)
     const rows = categories.map((c) => ({
       member_id: current.id,
       category_key: c.key,
@@ -92,14 +77,16 @@ export default function MemberInterestQuiz() {
     if (index + 1 < members.length) {
       setIndex(index + 1);
     } else {
-      await finishAll();
+      //caregiver survey runs last in setup
+      navigation.navigate('CaregiverSurvey');
     }
   };
 
   if (loading) {
     return (
-      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', gap: 8 }}>
         <ActivityIndicator />
+        <Text style={{ fontSize: 12, color: '#999' }}>quiz: loading categories</Text>
       </View>
     );
   }
@@ -129,7 +116,12 @@ export default function MemberInterestQuiz() {
                 <TouchableOpacity
                   key={w}
                   onPress={() => setWeights((prev) => ({ ...prev, [c.key]: w }))}
-                  style={{ flex: 1, borderWidth: 1, borderRadius: 8, paddingVertical: 8, alignItems: 'center', backgroundColor: selected ? '#333' : 'transparent' }}
+                  style={{
+                    flex: 1, borderWidth: 1, borderRadius: 8, paddingVertical: 8,
+                    alignItems: 'center',
+                    borderColor: selected ? '#333' : '#ccc',
+                    backgroundColor: selected ? '#333' : 'transparent',
+                  }}
                 >
                   <Text style={{ fontSize: 11, color: selected ? 'white' : 'black' }}>{label}</Text>
                 </TouchableOpacity>
@@ -140,9 +132,12 @@ export default function MemberInterestQuiz() {
       ))}
 
       {saving ? (
-        <ActivityIndicator />
+        <View style={{ alignItems: 'center', gap: 8 }}>
+          <ActivityIndicator />
+          <Text style={{ fontSize: 12, color: '#999' }}>quiz: saving</Text>
+        </View>
       ) : (
-        <Button title={index + 1 < members.length ? 'Next person' : 'Finish setup'} onPress={handleNext} />
+        <Button title={index + 1 < members.length ? 'Next person' : 'Continue'} onPress={handleNext} />
       )}
     </ScrollView>
   );

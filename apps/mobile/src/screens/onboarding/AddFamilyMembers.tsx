@@ -86,7 +86,7 @@ export default function AddFamilyMembers() {
     }
 
     setSaving(false);
-    navigation.navigate('ParentSurvey');
+    navigation.navigate('MemberInterestQuiz');
   };
 
   //never render bare null here

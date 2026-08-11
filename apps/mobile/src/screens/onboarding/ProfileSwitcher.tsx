@@ -60,7 +60,8 @@ export default function ProfileSwitcher() {
 
   const selectProfile = async (memberId: string) => {
     await setActiveProfile(memberId);
-    navigation.reset({ index: 0, routes: [{ name: 'Home' }] });
+    //root subscribes to profile and switches by itself
+    //navigation.reset({ index: 0, routes: [{ name: 'Home' }] });
   };
 
   if (loading) {
