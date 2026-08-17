@@ -3,6 +3,7 @@ import { View, Text, Button, Alert, Image, ActivityIndicator, ScrollView } from 
 import { useNavigation, useRoute } from '@react-navigation/native';
 import * as ImagePicker from 'expo-image-picker';
 import { getMyFamilyId, submitMissionPhoto } from '../../services/api/missions';
+import { approveManually } from '../../services/api/economy';
 
 type Verdict = {
   verified?: boolean;
@@ -10,6 +11,10 @@ type Verdict = {
   points?: number;
   coins?: number;
   duplicate?: boolean;
+  //0-10 consistency score from the model
+  match?: number;
+  //false for duplicates, so a reused photo can never be approved by hand
+  can_request_approval?: boolean;
 };
 
 export default function MissionPhotoCapture() {
@@ -21,6 +26,7 @@ export default function MissionPhotoCapture() {
   const [base64, setBase64] = useState<string | null>(null);
   const [mime, setMime] = useState('image/jpeg');
   const [busy, setBusy] = useState(false);
+  const [busyLabel, setBusyLabel] = useState('Checking your photo');
   const [verdict, setVerdict] = useState<Verdict | null>(null);
 
   const pick = async (fromCamera: boolean) => {
@@ -41,7 +47,7 @@ export default function MissionPhotoCapture() {
     const opts: ImagePicker.ImagePickerOptions = {
       mediaTypes: ['images'],
       base64: true,
-      quality: 0.6, // keeps the payload small enough for a single invoke
+      quality: 0.6, //keeps payload small enough for a single invoke
       allowsEditing: false,
     };
 
@@ -64,6 +70,7 @@ export default function MissionPhotoCapture() {
 
   const submit = async () => {
     if (!assignmentId || !base64) return;
+    setBusyLabel('Checking your photo');
     setBusy(true);
 
     const { familyId, error: famErr } = await getMyFamilyId();
@@ -83,6 +90,26 @@ export default function MissionPhotoCapture() {
     setVerdict(v as Verdict);
   };
 
+  const askGrownUp = async () => {
+    if (!assignmentId) return;
+    setBusyLabel('Asking a grown-up');
+    setBusy(true);
+
+    const { data, error } = await approveManually(assignmentId);
+    setBusy(false);
+
+    if (error) {
+      Alert.alert('Could not approve', error);
+      return;
+    }
+    setVerdict({
+      verified: true,
+      reason: 'A grown-up approved this one.',
+      points: data?.points,
+      coins: data?.coins,
+    });
+  };
+
   const retry = () => {
     setVerdict(null);
     setUri(null);
@@ -93,7 +120,7 @@ export default function MissionPhotoCapture() {
     return (
       <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', gap: 10 }}>
         <ActivityIndicator />
-        <Text style={{ color: '#666' }}>Checking your photo</Text>
+        <Text style={{ color: '#666' }}>{busyLabel}</Text>
         <Text style={{ fontSize: 12, color: '#aaa' }}>capture: verifying</Text>
       </View>
     );
@@ -101,8 +128,11 @@ export default function MissionPhotoCapture() {
 
   if (verdict) {
     const ok = verdict.verified === true;
+    // the server decides; a duplicate is never manually approvable
+    const canOverride = verdict.can_request_approval === true;
+
     return (
-      <View style={{ flex: 1, justifyContent: 'center', padding: 24, gap: 16 }}>
+      <ScrollView contentContainerStyle={{ flexGrow: 1, justifyContent: 'center', padding: 24, gap: 16 }}>
         <Text style={{ fontSize: 22, fontWeight: 'bold' }}>
           {ok ? 'Mission complete' : verdict.duplicate ? 'Photo already used' : 'Not quite'}
         </Text>
@@ -117,6 +147,10 @@ export default function MissionPhotoCapture() {
           </Text>
         ) : null}
 
+        {typeof verdict.match === 'number' ? (
+          <Text style={{ fontSize: 11, color: '#bbb' }}>match score {verdict.match}/10</Text>
+        ) : null}
+
         <View style={{ gap: 10, marginTop: 8 }}>
           {ok ? (
             <Button
@@ -124,7 +158,16 @@ export default function MissionPhotoCapture() {
               onPress={() => navigation.navigate('MissionRating', { assignmentId })}
             />
           ) : (
-            <Button title="Try another photo" onPress={retry} />
+            <>
+              <Button title="Try another photo" onPress={retry} />
+              {canOverride ? (
+                <Button
+                  title="Ask a grown-up to approve it"
+                  color="#2563eb"
+                  onPress={askGrownUp}
+                />
+              ) : null}
+            </>
           )}
           <Button
             title="Back to missions"
@@ -132,7 +175,7 @@ export default function MissionPhotoCapture() {
             onPress={() => navigation.navigate('MissionFeed')}
           />
         </View>
-      </View>
+      </ScrollView>
     );
   }
 

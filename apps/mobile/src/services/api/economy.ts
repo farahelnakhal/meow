@@ -172,3 +172,16 @@ export async function getRating(assignmentId: string) {
     .maybeSingle();
   return { data: (data ?? null) as { stars: number; note: string | null } | null, error: error?.message ?? null };
 }
+
+export async function approveManually(assignmentId: string) {
+  try {
+    const { data, error } = await withTimeout(
+      supabase.rpc('approve_submission_manually', { p_assignment_id: assignmentId }),
+      'approve_submission_manually'
+    );
+    if (error) return { data: null, error: error.message };
+    return { data: data as unknown as { points: number; coins: number }, error: null };
+  } catch (e: any) {
+    return { data: null, error: e?.message ?? 'failed' };
+  }
+}
