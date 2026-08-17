@@ -12,13 +12,17 @@ import ProfileSwitcher from '../screens/onboarding/ProfileSwitcher';
 import MissionFeed from '../screens/missions/MissionFeed';
 import MissionDetail from '../screens/missions/MissionDetail';
 import MissionPhotoCapture from '../screens/missions/MissionPhotoCapture';
-import { getActiveProfile, clearActiveProfile, subscribeActiveProfile } from '../store/activeProfile';
+import MissionRating from '../screens/missions/MissionRating';
+import EggOpening from '../screens/rewards/EggOpening';
+import AnimalCollection from '../screens/rewards/AnimalCollection';
+import SettlementBuilder from '../screens/rewards/SettlementBuilder';
+import { useActiveProfile } from '../store/activeProfile';
 
 const Stack = createNativeStackNavigator();
 
 export default function RootNavigator() {
+  const { activeProfileId, loading: profileLoading, clearProfile } = useActiveProfile();
   const [session, setSession] = useState<any>(null);
-  const [activeProfileId, setActiveProfileId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -32,15 +36,13 @@ export default function RootNavigator() {
           if (error || !userData?.user) {
             console.log('[Root] stale session discarded:', error?.message);
             await supabase.auth.signOut();
-            await clearActiveProfile();
+            await clearProfile();
             setSession(null);
-            setActiveProfileId(null);
             return;
           }
         }
 
         setSession(data.session);
-        setActiveProfileId(await getActiveProfile());
       } catch (e: any) {
         console.log('[Root] init failed:', e?.message);
         setSession(null);
@@ -51,21 +53,14 @@ export default function RootNavigator() {
 
     init();
 
-    //func owns activeProfileId but ProfileSwitcher writes it
-    const unsubProfile = subscribeActiveProfile((id) => setActiveProfileId(id));
-
-    const { data: listener } = supabase.auth.onAuthStateChange(async (_event, session) => {
-      setSession(session);
-      setActiveProfileId(await getActiveProfile());
+    const { data: listener } = supabase.auth.onAuthStateChange((_event, s) => {
+      setSession(s);
     });
 
-    return () => {
-      unsubProfile();
-      listener.subscription.unsubscribe();
-    };
-  }, []);
+    return () => listener.subscription.unsubscribe();
+  }, [clearProfile]);
 
-  if (loading) {
+  if (loading || profileLoading) {
     return (
       <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', gap: 8 }}>
         <ActivityIndicator />
@@ -95,6 +90,10 @@ export default function RootNavigator() {
             <Stack.Screen name="MissionFeed" component={MissionFeed} />
             <Stack.Screen name="MissionDetail" component={MissionDetail} />
             <Stack.Screen name="MissionPhotoCapture" component={MissionPhotoCapture} />
+            <Stack.Screen name="MissionRating" component={MissionRating} />
+            <Stack.Screen name="EggOpening" component={EggOpening} />
+            <Stack.Screen name="AnimalCollection" component={AnimalCollection} />
+            <Stack.Screen name="SettlementBuilder" component={SettlementBuilder} />
             <Stack.Screen name="ProfileSwitcher" component={ProfileSwitcher} />
           </>
         )}

@@ -3,7 +3,7 @@ import {
   View, Text, FlatList, TouchableOpacity, ActivityIndicator, RefreshControl, Button,
 } from 'react-native';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
-import { getActiveProfile } from '../../store/activeProfile';
+import { readActiveProfile } from '../../store/activeProfile';
 import {
   getMyFamilyId, getFamilyMembers, memberLookupFrom, getOpenAssignments, assignMissions,
 } from '../../services/api/missions';
@@ -20,7 +20,7 @@ export default function MissionFeed() {
 
   const load = useCallback(async () => {
     try {
-      const memberId = await getActiveProfile();
+      const memberId = await readActiveProfile();
       if (!memberId) {
         setError('No active profile selected.');
         return;
@@ -89,6 +89,15 @@ export default function MissionFeed() {
         Your missions
       </Text>
 
+      <View style={{ flexDirection: 'row', gap: 10, paddingHorizontal: 20, marginBottom: 12 }}>
+        <View style={{ flex: 1 }}>
+          <Button title="Egg" onPress={() => navigation.navigate('EggOpening')} />
+        </View>
+        <View style={{ flex: 1 }}>
+          <Button title="Settlement" onPress={() => navigation.navigate('SettlementBuilder')} />
+        </View>
+      </View>
+
       <FlatList
         data={rows}
         keyExtractor={(item) => item.id}
@@ -101,7 +110,11 @@ export default function MissionFeed() {
             <Text style={{ color: '#666', textAlign: 'center' }}>
               Nothing open right now.
             </Text>
-            <Button title={assigning ? 'Finding missions...' : 'Get new missions'} onPress={handleGetMore} disabled={assigning} />
+            <Button
+              title={assigning ? 'Finding missions...' : 'Get new missions'}
+              onPress={handleGetMore}
+              disabled={assigning}
+            />
           </View>
         }
         renderItem={({ item }) => {
@@ -126,7 +139,11 @@ export default function MissionFeed() {
 
       {rows.length > 0 ? (
         <View style={{ padding: 20 }}>
-          <Button title={assigning ? 'Finding missions...' : 'Get more missions'} onPress={handleGetMore} disabled={assigning} />
+          <Button
+            title={assigning ? 'Finding missions...' : 'Get more missions'}
+            onPress={handleGetMore}
+            disabled={assigning}
+          />
         </View>
       ) : null}
     </View>

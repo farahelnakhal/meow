@@ -23,37 +23,57 @@ export default function AddFamilyMembers() {
 
     let cancelled = false;
     let attempts = 0;
+    let timer: ReturnType<typeof setTimeout> | null = null;
+
+    const retryOrFail = (msg: string) => {
+      if (cancelled) return;
+      if (attempts >= 10) {
+        setLookupError(msg);
+        return;
+      }
+      timer = setTimeout(tryLoad, 500);
+    };
 
     const tryLoad = async () => {
       if (cancelled) return;
-
-      const { data: userData } = await supabase.auth.getUser();
-      if (!userData.user || cancelled) return;
-
-      const { data: memberRow, error } = await supabase
-        .from('family_members')
-        .select('family_id')
-        .eq('auth_user_id', userData.user.id)
-        .maybeSingle();
-
-      if (cancelled) return;
-
-      if (memberRow) {
-        setFamilyId(memberRow.family_id);
-        return;
-      }
-
       attempts += 1;
-      if (attempts < 8) {
-        setTimeout(tryLoad, 500); //~4s total
-      } else {
-        setLookupError(error?.message ?? 'Could not find your family after signup.');
+
+      try {
+        const { data: userData, error: userErr } = await supabase.auth.getUser();
+        if (cancelled) return;
+
+        //right after signup the session may not have propagated yet, retry
+        if (!userData?.user) {
+          console.log(`[AFM ${attempts}] no auth user yet`, userErr?.message ?? '');
+          return retryOrFail(userErr?.message ?? 'No signed-in user found.');
+        }
+
+        const { data: memberRow, error } = await supabase
+          .from('family_members')
+          .select('family_id')
+          .eq('auth_user_id', userData.user.id)
+          .maybeSingle();
+
+        if (cancelled) return;
+
+        if (memberRow) {
+          console.log(`[AFM ${attempts}] found family ${memberRow.family_id}`);
+          setFamilyId(memberRow.family_id);
+          return;
+        }
+
+        console.log(`[AFM ${attempts}] no member row yet`, error?.message ?? '');
+        return retryOrFail(error?.message ?? 'Could not find your family after signup.');
+      } catch (e: any) {
+        console.log(`[AFM ${attempts}] threw:`, e?.message);
+        return retryOrFail(e?.message ?? 'Lookup failed.');
       }
     };
 
     tryLoad();
     return () => {
       cancelled = true;
+      if (timer) clearTimeout(timer);
     };
   }, [familyId]);
 

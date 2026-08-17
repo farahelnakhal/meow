@@ -4,7 +4,13 @@ import { useNavigation, useRoute } from '@react-navigation/native';
 import * as ImagePicker from 'expo-image-picker';
 import { getMyFamilyId, submitMissionPhoto } from '../../services/api/missions';
 
-type Verdict = { verified?: boolean; reason?: string; points?: number; coins?: number; duplicate?: boolean };
+type Verdict = {
+  verified?: boolean;
+  reason?: string;
+  points?: number;
+  coins?: number;
+  duplicate?: boolean;
+};
 
 export default function MissionPhotoCapture() {
   const navigation = useNavigation<any>();
@@ -23,14 +29,19 @@ export default function MissionPhotoCapture() {
       : await ImagePicker.requestMediaLibraryPermissionsAsync();
 
     if (!perm.granted) {
-      Alert.alert('Permission needed', fromCamera ? 'Camera access is required to take proof photos.' : 'Photo library access is required.');
+      Alert.alert(
+        'Permission needed',
+        fromCamera
+          ? 'Camera access is required to take proof photos.'
+          : 'Photo library access is required.'
+      );
       return;
     }
 
     const opts: ImagePicker.ImagePickerOptions = {
       mediaTypes: ['images'],
       base64: true,
-      quality: 0.6, //keeps the payload small enough for single invoke
+      quality: 0.6, // keeps the payload small enough for a single invoke
       allowsEditing: false,
     };
 
@@ -72,6 +83,12 @@ export default function MissionPhotoCapture() {
     setVerdict(v as Verdict);
   };
 
+  const retry = () => {
+    setVerdict(null);
+    setUri(null);
+    setBase64(null);
+  };
+
   if (busy) {
     return (
       <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', gap: 10 }}>
@@ -89,17 +106,31 @@ export default function MissionPhotoCapture() {
         <Text style={{ fontSize: 22, fontWeight: 'bold' }}>
           {ok ? 'Mission complete' : verdict.duplicate ? 'Photo already used' : 'Not quite'}
         </Text>
+
         <Text style={{ fontSize: 15, lineHeight: 22, color: '#333' }}>
           {verdict.reason ?? (ok ? 'Nice work.' : 'Try taking the photo again.')}
         </Text>
+
         {ok ? (
           <Text style={{ fontSize: 16 }}>
             +{verdict.points ?? 0} points, +{verdict.coins ?? 0} coins
           </Text>
         ) : null}
+
         <View style={{ gap: 10, marginTop: 8 }}>
-          {!ok ? <Button title="Try another photo" onPress={() => { setVerdict(null); setUri(null); setBase64(null); }} /> : null}
-          <Button title="Back to missions" onPress={() => navigation.navigate('MissionFeed')} />
+          {ok ? (
+            <Button
+              title="Rate this mission"
+              onPress={() => navigation.navigate('MissionRating', { assignmentId })}
+            />
+          ) : (
+            <Button title="Try another photo" onPress={retry} />
+          )}
+          <Button
+            title="Back to missions"
+            color="#777"
+            onPress={() => navigation.navigate('MissionFeed')}
+          />
         </View>
       </View>
     );
@@ -113,7 +144,11 @@ export default function MissionPhotoCapture() {
       </Text>
 
       {uri ? (
-        <Image source={{ uri }} style={{ width: '100%', height: 280, borderRadius: 10, backgroundColor: '#eee' }} resizeMode="cover" />
+        <Image
+          source={{ uri }}
+          style={{ width: '100%', height: 280, borderRadius: 10, backgroundColor: '#eee' }}
+          resizeMode="cover"
+        />
       ) : null}
 
       <View style={{ gap: 10 }}>

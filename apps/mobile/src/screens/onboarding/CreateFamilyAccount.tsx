@@ -59,8 +59,6 @@ export default function CreateFamilyAccount() {
       Alert.alert('Error', rpcError?.message ?? 'Family creation returned nothing.');
       return;
     }
-
-    navigation.navigate('AddFamilyMembers', { familyId });
   };
 
   const chip = (selected: boolean) => ({
