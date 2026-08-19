@@ -161,3 +161,22 @@ function decodeBase64(b64: string): Uint8Array {
   }
   return out;
 }
+
+export async function generateMissions(categoryKey?: string) {
+  try {
+    const call = supabase.functions.invoke('generate-missions', {
+      body: categoryKey ? { category_key: categoryKey } : {},
+    });
+    const timeout = new Promise<never>((_, reject) =>
+      setTimeout(() => reject(new Error('generate-missions timed out after 45000ms')), 45000)
+    );
+    const { data, error } = (await Promise.race([call, timeout])) as any;
+    if (error) return { data: null, error: error.message ?? String(error) };
+    return {
+      data: data as { created: number; titles: string[]; rejected: number; quota_remaining: number },
+      error: null,
+    };
+  } catch (e: any) {
+    return { data: null, error: e?.message ?? 'failed' };
+  }
+}

@@ -1,11 +1,12 @@
 import React, { useCallback, useState } from 'react';
 import {
-  View, Text, FlatList, TouchableOpacity, ActivityIndicator, RefreshControl, Button,
+  View, Text, FlatList, TouchableOpacity, ActivityIndicator, RefreshControl, Button, Alert,
 } from 'react-native';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { readActiveProfile } from '../../store/activeProfile';
 import {
-  getMyFamilyId, getFamilyMembers, memberLookupFrom, getOpenAssignments, assignMissions,
+  getMyFamilyId, getFamilyMembers, memberLookupFrom, getOpenAssignments,
+  assignMissions, generateMissions,
 } from '../../services/api/missions';
 import { resolveAssignment, COST_TIER_LABEL, type AssignmentRow, type MemberLookup } from '../../types/missions';
 
@@ -17,6 +18,7 @@ export default function MissionFeed() {
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [assigning, setAssigning] = useState(false);
+  const [generating, setGenerating] = useState(false);
 
   const load = useCallback(async () => {
     try {
@@ -54,7 +56,7 @@ export default function MissionFeed() {
     }
   }, []);
 
-  // reload on focus so returning from a submission shows fresh state
+  //reload on focus so returning from a submission shows fresh state
   useFocusEffect(useCallback(() => { load(); }, [load]));
 
   const handleGetMore = async () => {
@@ -62,6 +64,27 @@ export default function MissionFeed() {
     const { familyId } = await getMyFamilyId();
     if (familyId) await assignMissions(familyId, 3);
     setAssigning(false);
+    await load();
+  };
+
+  const handleGenerate = async () => {
+    setGenerating(true);
+    const { data, error: gErr } = await generateMissions();
+    setGenerating(false);
+
+    if (gErr) {
+      Alert.alert('Could not add new missions', gErr);
+      return;
+    }
+
+    Alert.alert(
+      'New missions added',
+      `${data?.created ?? 0} fresh ideas, made for your family:\n\n${(data?.titles ?? []).join('\n')}`
+    );
+
+    // pull them into the pool straight away
+    const { familyId } = await getMyFamilyId();
+    if (familyId) await assignMissions(familyId, 2);
     await load();
   };
 
@@ -82,6 +105,8 @@ export default function MissionFeed() {
       </View>
     );
   }
+
+  const busy = assigning || generating;
 
   return (
     <View style={{ flex: 1, paddingTop: 56 }}>
@@ -119,7 +144,7 @@ export default function MissionFeed() {
             <Button
               title={assigning ? 'Finding missions...' : 'Get new missions'}
               onPress={handleGetMore}
-              disabled={assigning}
+              disabled={busy}
             />
           </View>
         }
@@ -146,15 +171,21 @@ export default function MissionFeed() {
         }}
       />
 
-      {rows.length > 0 ? (
-        <View style={{ padding: 20 }}>
+      <View style={{ padding: 20, gap: 10 }}>
+        {rows.length > 0 ? (
           <Button
             title={assigning ? 'Finding missions...' : 'Get more missions'}
             onPress={handleGetMore}
-            disabled={assigning}
+            disabled={busy}
           />
-        </View>
-      ) : null}
+        ) : null}
+        <Button
+          title={generating ? 'Thinking of new ideas...' : 'Invent new missions for us'}
+          color="#7c3aed"
+          onPress={handleGenerate}
+          disabled={busy}
+        />
+      </View>
     </View>
   );
 }
