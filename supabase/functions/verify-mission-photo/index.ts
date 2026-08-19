@@ -1,4 +1,4 @@
-import { createClient } from '@supabase/supabase-js';
+import { createClient } from 'npm:@supabase/supabase-js@2';
 import { verifyImageJson, GEMINI_MODEL } from '../_shared/geminiClient.ts';
 import { CORS_HEADERS } from '../_shared/types.ts';
 import { sha256Hex } from '../_shared/imageHash.ts';

@@ -17,6 +17,10 @@ import EggOpening from '../screens/rewards/EggOpening';
 import AnimalCollection from '../screens/rewards/AnimalCollection';
 import SettlementBuilder from '../screens/rewards/SettlementBuilder';
 import { useActiveProfile } from '../store/activeProfile';
+import MissionHintChat from '../screens/missions/MissionHintChat';
+import NearbyLocations from '../screens/social/NearbyLocations';
+import CreatePoll from '../screens/social/CreatePoll';
+import VotePoll from '../screens/social/VotePoll';
 
 const Stack = createNativeStackNavigator();
 
@@ -84,6 +88,10 @@ export default function RootNavigator() {
             <Stack.Screen name="MemberInterestQuiz" component={MemberInterestQuiz} />
             <Stack.Screen name="CaregiverSurvey" component={CaregiverSurvey} />
             <Stack.Screen name="ProfileSwitcher" component={ProfileSwitcher} />
+            <Stack.Screen name="MissionHintChat" component={MissionHintChat} />
+            <Stack.Screen name="NearbyLocations" component={NearbyLocations} />
+            <Stack.Screen name="CreatePoll" component={CreatePoll} />
+            <Stack.Screen name="VotePoll" component={VotePoll} />
           </>
         ) : (
           <>

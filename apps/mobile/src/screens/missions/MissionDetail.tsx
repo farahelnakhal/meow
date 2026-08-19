@@ -94,9 +94,11 @@ export default function MissionDetail() {
 
   const { title, description, partnerNames } = resolveAssignment(row, members);
   const alreadySubmitted = row.status === 'submitted';
+  // only offer nearby places for missions that actually involve going somewhere
+  const goesOut = row.missions.location_type === 'local';
 
   return (
-    <ScrollView contentContainerStyle={{ padding: 20, paddingTop: 60, gap: 16 }}>
+    <ScrollView contentContainerStyle={{ padding: 20, paddingTop: 60, gap: 16, paddingBottom: 40 }}>
       <Text style={{ fontSize: 24, fontWeight: 'bold' }}>{title}</Text>
       <Text style={{ fontSize: 16, lineHeight: 23, color: '#333' }}>{description}</Text>
 
@@ -109,19 +111,46 @@ export default function MissionDetail() {
         {row.missions.requires_game ? (
           <Text style={{ color: '#555' }}>Needs: {row.missions.requires_game}</Text>
         ) : null}
+        {goesOut ? (
+          <Text style={{ color: '#555' }}>This one is outside the house</Text>
+        ) : null}
       </View>
 
       {alreadySubmitted ? (
-        <Text style={{ color: '#b8860b' }}>
-          Photo submitted. Waiting on verification.
-        </Text>
+        <View style={{ gap: 10 }}>
+          <Text style={{ color: '#b8860b' }}>
+            Photo submitted. Waiting on verification.
+          </Text>
+          <Button
+            title="Stuck? Ask for a hint"
+            color="#2563eb"
+            onPress={() => navigation.navigate('MissionHintChat', { assignmentId: row.id })}
+          />
+        </View>
       ) : (
         <View style={{ gap: 10, marginTop: 8 }}>
           <Button
             title="Take proof photo"
             onPress={() => navigation.navigate('MissionPhotoCapture', { assignmentId: row.id })}
           />
-          <Button title={busy ? 'Skipping...' : 'Skip this one'} onPress={handleSkip} disabled={busy} color="#999" />
+          <Button
+            title="Stuck? Ask for a hint"
+            color="#2563eb"
+            onPress={() => navigation.navigate('MissionHintChat', { assignmentId: row.id })}
+          />
+          {goesOut ? (
+            <Button
+              title="Places near me"
+              color="#2563eb"
+              onPress={() => navigation.navigate('NearbyLocations')}
+            />
+          ) : null}
+          <Button
+            title={busy ? 'Skipping...' : 'Skip this one'}
+            onPress={handleSkip}
+            disabled={busy}
+            color="#999"
+          />
         </View>
       )}
     </ScrollView>

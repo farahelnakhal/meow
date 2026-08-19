@@ -85,16 +85,22 @@ export default function MissionFeed() {
 
   return (
     <View style={{ flex: 1, paddingTop: 56 }}>
-      <Text style={{ fontSize: 24, fontWeight: 'bold', paddingHorizontal: 20, marginBottom: 12 }}>
-        Your missions
-      </Text>
+      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, marginBottom: 12 }}>
+        <Text style={{ fontSize: 24, fontWeight: 'bold' }}>Your missions</Text>
+        <TouchableOpacity onPress={() => navigation.navigate('ProfileSwitcher')} hitSlop={8}>
+          <Text style={{ color: '#2563eb', fontSize: 13 }}>Switch</Text>
+        </TouchableOpacity>
+      </View>
 
-      <View style={{ flexDirection: 'row', gap: 10, paddingHorizontal: 20, marginBottom: 12 }}>
+      <View style={{ flexDirection: 'row', gap: 8, paddingHorizontal: 20, marginBottom: 12 }}>
         <View style={{ flex: 1 }}>
           <Button title="Egg" onPress={() => navigation.navigate('EggOpening')} />
         </View>
         <View style={{ flex: 1 }}>
-          <Button title="Settlement" onPress={() => navigation.navigate('SettlementBuilder')} />
+          <Button title="Village" onPress={() => navigation.navigate('SettlementBuilder')} />
+        </View>
+        <View style={{ flex: 1 }}>
+          <Button title="Poll" onPress={() => navigation.navigate('VotePoll')} />
         </View>
       </View>
 
@@ -129,6 +135,9 @@ export default function MissionFeed() {
                 {COST_TIER_LABEL[item.missions.cost_tier]} · {item.missions.points} pts · {item.missions.coins} coins
                 {partnerNames.length ? ` · with ${partnerNames.join(' & ')}` : ''}
               </Text>
+              {item.missions.location_type === 'local' ? (
+                <Text style={{ fontSize: 12, color: '#777' }}>Outside the house</Text>
+              ) : null}
               {item.status === 'submitted' ? (
                 <Text style={{ fontSize: 12, color: '#b8860b' }}>Waiting on verification</Text>
               ) : null}
