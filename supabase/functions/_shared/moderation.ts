@@ -97,3 +97,65 @@ export function validateUserQuestion(raw: string): { ok: boolean; text: string; 
   if (text.length > 500) return { ok: false, text, reason: 'question too long' };
   return { ok: true, text };
 }
+
+
+//extra gate for notes shown to a parent about their own child.
+const CLINICAL_OR_ALARMING = [
+  'disengaged',
+  'disengagement',
+  'concerning',
+  'worrying',
+  'at risk',
+  'withdrawn',
+  'withdrawing',
+  'isolating',
+  'refusing',
+  'refuses to',
+  'failure',
+  'failing',
+  'falling behind',
+  'behind their peers',
+  'problem child',
+  'acting out',
+  'defiant',
+  'symptom',
+  'diagnos',//catches diagnose/diagnosis/diagnostic
+  'disorder',
+  'depress', //depressed/depression
+  'anxious',
+  'anxiety',
+  'unhealthy',
+  'neglect',
+];
+
+const PARENT_NOTE_FALLBACK =
+  'There is a pattern worth a look in the numbers below. A short activity together this week is usually enough to shift it.';
+
+export function moderateParentNote(raw: string): ModerationResult {
+  //everything assistant gate catches still applies
+  const base = moderateAssistantText(raw);
+  if (!base.ok) {
+    return { ok: false, reason: base.reason, replacement: PARENT_NOTE_FALLBACK };
+  }
+
+  const lower = base.text.toLowerCase();
+  const hitWord = hit(lower, CLINICAL_OR_ALARMING);
+  if (hitWord) {
+    return {
+      ok: false,
+      reason: `clinical or alarming language: "${hitWord}"`,
+      replacement: PARENT_NOTE_FALLBACK,
+    };
+  }
+
+  //note longer than this is a report
+  if (base.text.length > 400) {
+    return {
+      ok: false,
+      reason: 'parent note too long',
+      replacement: base.text.slice(0, 397).trimEnd() + '...',
+    };
+  }
+
+  return { ok: true, text: base.text };
+}
